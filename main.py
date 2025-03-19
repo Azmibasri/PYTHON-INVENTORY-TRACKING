@@ -23,7 +23,7 @@ def cek_password():
         root.withdraw()
         root.utama()
     else:
-        messagebox.showerror("Login Gagal","Password salah! Coba lagi.")
+        messagebox.showerror("Login Gagal?","Password salah! Coba lagi.")
 
 def muat_data(DATA_FILE):
     if not os.path.exists(DATA_FILE):
