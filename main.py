@@ -5,7 +5,6 @@ import os
 from tkinter import ttk, messagebox
 from cryptography.fernet import Fernet
 
-
 class App:
     def __init__(self, root):
         self.root = root
@@ -22,8 +21,9 @@ class App:
         self.root.title("Inventory Tracking")
         self.root.geometry(f"{self.lebar_jendela}x{self.tinggi_jendela}+{self.posisi_x}+{self.posisi_y}")
         self.root.resizable(False, False)
+        self.root.overrideredirect(True)
 
-        self.MASTER_HASH = bcrypt.hashpw(b"admin123", bcrypt.gensalt())
+        self.MASTER_HASH = b'$2b$12$97EhEKjGzbWqEMDT11JWCuA0SpPPG5Eumx4rZy7VV9Gd8Sf8QUJTG'
 
         self.kunci = self.muat_kunci()
         self.cipher = Fernet(self.kunci)
@@ -31,21 +31,49 @@ class App:
         self.muat_data()
 
         self.container = ttk.Frame(root)
-        self.container.pack(expand=True)
 
+        # Frame utama untuk login di tengah
         self.formlogin = ttk.Frame(self.container)
-        self.formlogin.pack()
-
         self.label_password = ttk.Label(self.formlogin, text="Password:")
-        self.label_password.grid(row=0, column=0, padx=5, pady=5, sticky="e")
-
         self.entry_password = ttk.Entry(self.formlogin, show="*")
-        self.entry_password.grid(row=0, column=1, padx=5, pady=5)
+        self.login_btn = ttk.Button(self.formlogin, text="Login", command=self.cek_password)
+        self.Label_buat_akun = ttk.Label(self.container, text="Buat akun baru.")
 
-        self.login_btn = ttk.Button(self.container, text="Login", command=self.cek_password)
-        self.login_btn.pack(pady=10, anchor="center")
+        self.container.pack(expand=True,fill="both",anchor="center")
+        self.formlogin.pack(expand=True,pady=100)
+        self.label_password.grid(row=0,column=0,padx=5)
+        self.entry_password.grid(row=0,column=1,padx=5)
+        self.login_btn.grid(row=1,column=1,pady=5)
+        self.Label_buat_akun.pack(side="right")
+
+        self.Label_buat_akun.bind("<Button-1>",lambda event: self.buat_akun_baru())
+
+
 
         self.dashboard_window = None  # Tambahkan variabel untuk melacak dashboard window
+
+    def buat_akun_baru(self):
+        if self.dashboard_window is not None and self.dashboard_window.winfo_exists():
+            self.dashboard_window.deiconify()  # Jika sudah ada, munculkan kembali
+            return
+
+        self.dashboard_window = tk.Toplevel(self.root)  # Hubungkan ke root utama
+        self.dashboard_window.title("Buat akun baru")
+        self.dashboard_window.geometry("400x300")
+
+        self.container = tk.Frame(self.dashboard_window, bg="red")  # Pastikan ini terkait dengan dashboard_window
+        self.formbuatakun = tk.Frame(self.container,bg="blue")
+        self.Labelusername = ttk.Label(self.container,text="Usename:")
+
+        self.container.pack(expand=True, fill="both")  # Tambahkan pack agar terlihat
+        self.formbuatakun.pack()
+        self.Labelusername.grid(row=0,column=0)
+
+
+        # Lingkungan desain UI
+
+        self.dashboard_window.protocol("WM_DELETE_WINDOW", self.keluar_program)
+    
 
     def muat_kunci(self):
         file_kunci = "kunci.key"
