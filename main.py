@@ -190,15 +190,19 @@ class App:
         self.dashboard_window.resizable(False,False)
 
         # Ambil ukuran layar dari root, bukan dari self.dashboard_window
-        lebar_layar = self.root.winfo_screenwidth()
-        tinggi_layar = self.root.winfo_screenheight()
+        self.lebar_layar = self.root.winfo_screenwidth()
+        self.tinggi_layar = self.root.winfo_screenheight()
 
-        self.dashboard_window.geometry(f"{lebar_layar}x{tinggi_layar}")
+        self.dashboard_window.geometry(f"{self.lebar_layar}x{self.tinggi_layar}")
 
-        ttk.Label(self.dashboard_window, text="Selamat datang di Dashboard!").pack(pady=20)
-
-        exit_btn = ttk.Button(self.dashboard_window, text="Keluar", command=self.keluar_program)
-        exit_btn.pack(pady=10)
+        #Ruang UI
+        self.container = tk.Frame(self.dashboard_window,bg="blue")
+        self.navigasi = tk.Frame(self.container,bg="yellow")
+        self.konten = tk.Frame(self.container,bg="red")
+        
+        self.navigasi.place(x=0,y=0,width=100,height=self.tinggi_layar)
+        self.konten.place(x=100,y=0,width=(self.lebar_layar-100),height=self.tinggi_layar)
+        self.container.pack(expand=True,fill="both",side="left")
 
         self.dashboard_window.protocol("WM_DELETE_WINDOW", self.keluar_program)
 
