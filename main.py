@@ -224,6 +224,39 @@ class App:
 
         self.dashboard_window.protocol("WM_DELETE_WINDOW", self.keluar_program)
 
+        #kontrol input
+        self.tambah_data.bind("<Button-1>", lambda event: self.tampilkan_tambah_data())
+        self.grafik.bind("<Button-1>", lambda event: self.tampilkan_grafik())
+        self.manual.bind("<Button-1>", lambda event: self.tampilkan_manual())
+
+    def tampilkan_tambah_data(self):
+        # Hapus semua widget yang ada di dalam self.konten
+        for widget in self.konten.winfo_children():
+            widget.destroy()
+
+        # Tambahkan widget baru
+        self.labell = ttk.Label(self.konten, text="Percobaan awal")
+        self.labell.pack()
+
+    def tampilkan_grafik(self):
+        # Hapus semua widget yang ada di dalam self.konten
+        for widget in self.konten.winfo_children():
+            widget.destroy()
+
+        # Tambahkan widget baru
+        self.labell = ttk.Label(self.konten, text="Percobaan kedua")
+        self.labell.pack()
+
+    def tampilkan_manual(self):
+        # Hapus semua widget yang ada di dalam self.konten
+        for widget in self.konten.winfo_children():
+            widget.destroy()
+
+        # Tambahkan widget baru
+        self.labell = ttk.Label(self.konten, text="Percobaan ketiga")
+        self.labell.pack()
+
+
 
 if __name__ == "__main__":
     root = tk.Tk()
