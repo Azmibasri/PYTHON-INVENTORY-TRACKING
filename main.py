@@ -6,7 +6,7 @@ from tkinter import ttk, messagebox
 from cryptography.fernet import Fernet
 
 class App:
-    MASTER_PASSWORD = b'$2b$12$97EhEKjGzbWqEMDT11JWCuA0SpPPG5Eumx4rZy7VV9Gd8Sf8QUJTG' # Hash dari "master123"
+    MASTER_PASSWORD = b'$2b$12$97EhEKjGzbWqEMDT11JWCuA0SpPPG5Eumx4rZy7VV9Gd8Sf8QUJTG' # Hash dari "Kurik"
 
     def __init__(self, root):
         self.root = root
