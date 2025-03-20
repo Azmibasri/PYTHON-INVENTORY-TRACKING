@@ -146,15 +146,6 @@ class App:
 
         messagebox.showerror("Login Gagal", "Email atau Password salah!")
 
-    def dashboard(self):
-        """Menampilkan dashboard setelah login berhasil."""
-        self.dashboard_window = tk.Toplevel(self.root)
-        self.dashboard_window.title("Dashboard")
-        self.dashboard_window.geometry("400x300")
-
-        ttk.Label(self.dashboard_window, text="Selamat datang di Dashboard!").pack(pady=20)
-        exit_btn = ttk.Button(self.dashboard_window, text="Keluar", command=self.keluar_program)
-        exit_btn.pack(pady=10)
 
     def muat_kunci(self):
         file_kunci = "kunci.key"
@@ -187,6 +178,30 @@ class App:
 
     def keluar_program(self):
         self.root.destroy()
+
+    def dashboard(self):
+        """Menampilkan dashboard setelah login berhasil."""
+        if self.dashboard_window is not None and self.dashboard_window.winfo_exists():
+            self.dashboard_window.deiconify()  # Jika sudah ada, munculkan kembali
+            return
+
+        self.dashboard_window = tk.Toplevel(self.root)
+        self.dashboard_window.title("Dashboard")
+        self.dashboard_window.resizable(False,False)
+
+        # Ambil ukuran layar dari root, bukan dari self.dashboard_window
+        lebar_layar = self.root.winfo_screenwidth()
+        tinggi_layar = self.root.winfo_screenheight()
+
+        self.dashboard_window.geometry(f"{lebar_layar}x{tinggi_layar}")
+
+        ttk.Label(self.dashboard_window, text="Selamat datang di Dashboard!").pack(pady=20)
+
+        exit_btn = ttk.Button(self.dashboard_window, text="Keluar", command=self.keluar_program)
+        exit_btn.pack(pady=10)
+
+        self.dashboard_window.protocol("WM_DELETE_WINDOW", self.keluar_program)
+
 
 if __name__ == "__main__":
     root = tk.Tk()
