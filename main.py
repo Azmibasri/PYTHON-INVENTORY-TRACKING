@@ -235,8 +235,9 @@ class App:
             widget.destroy()
 
         # Tambahkan widget baru
-        self.labell = ttk.Label(self.konten, text="Percobaan awal")
-        self.labell.pack()
+        self.container = tk.Frame(self.konten, bg="white")
+        self.container.pack(expand=True,fill="both")
+
 
     def tampilkan_grafik(self):
         # Hapus semua widget yang ada di dalam self.konten
