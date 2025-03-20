@@ -146,7 +146,6 @@ class App:
 
         messagebox.showerror("Login Gagal", "Email atau Password salah!")
 
-
     def muat_kunci(self):
         file_kunci = "kunci.key"
         if os.path.exists(file_kunci):
@@ -238,7 +237,6 @@ class App:
         self.container = tk.Frame(self.konten, bg="white")
         self.container.pack(expand=True,fill="both")
 
-
     def tampilkan_grafik(self):
         # Hapus semua widget yang ada di dalam self.konten
         for widget in self.konten.winfo_children():
@@ -256,7 +254,6 @@ class App:
         # Tambahkan widget baru
         self.labell = ttk.Label(self.konten, text="Percobaan ketiga")
         self.labell.pack()
-
 
 
 if __name__ == "__main__":
