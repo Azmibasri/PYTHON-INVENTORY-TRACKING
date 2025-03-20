@@ -4,7 +4,7 @@ import json
 import os
 from tkinter import ttk, messagebox
 from cryptography.fernet import Fernet
-
+from PIL import Image,ImageTk
 class App:
     MASTER_PASSWORD = b'$2b$12$97EhEKjGzbWqEMDT11JWCuA0SpPPG5Eumx4rZy7VV9Gd8Sf8QUJTG' # Hash dari "Kurik"
 
@@ -199,7 +199,25 @@ class App:
         self.container = tk.Frame(self.dashboard_window,bg="blue")
         self.navigasi = tk.Frame(self.container,bg="yellow")
         self.konten = tk.Frame(self.container,bg="red")
-        
+
+        #Navigasi
+        self.plus = Image.open("icons/plus.png").convert("RGBA").resize((40, 40))
+        self.Plus_image = ImageTk.PhotoImage(self.plus)
+        self.tambah_data = ttk.Label(self.navigasi,image=self.Plus_image)
+
+        self.home = Image.open("icons/home.png").convert("RGBA").resize((40, 40))
+        self.home_image = ImageTk.PhotoImage(self.home)
+        self.grafik = ttk.Label(self.navigasi,image=self.home_image)
+
+        self.ubah = Image.open("icons/edit.png").convert("RGBA").resize((40, 40))
+        self.ubah_image = ImageTk.PhotoImage(self.ubah)
+        self.manual = ttk.Label(self.navigasi,image=self.ubah_image)
+
+        #Navigasi placement
+        self.tambah_data.grid(row=0,column=1,padx=20,pady=10)
+        self.grafik.grid(row=1,column=1,padx=20,pady=10)
+        self.manual.grid(row=2,column=1,padx=20,pady=10)
+
         self.navigasi.place(x=0,y=0,width=100,height=self.tinggi_layar)
         self.konten.place(x=100,y=0,width=(self.lebar_layar-100),height=self.tinggi_layar)
         self.container.pack(expand=True,fill="both",side="left")
