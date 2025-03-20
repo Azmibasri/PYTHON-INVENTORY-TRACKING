@@ -6,15 +6,14 @@ from tkinter import ttk, messagebox
 from cryptography.fernet import Fernet
 
 class App:
+    MASTER_PASSWORD = b'$2b$12$97EhEKjGzbWqEMDT11JWCuA0SpPPG5Eumx4rZy7VV9Gd8Sf8QUJTG' # Hash dari "master123"
+
     def __init__(self, root):
         self.root = root
-
         self.lebar_layar = root.winfo_screenwidth()
         self.tinggi_layar = root.winfo_screenheight()
-
         self.lebar_jendela = 400
         self.tinggi_jendela = 300
-
         self.posisi_x = (self.lebar_layar - self.lebar_jendela) // 2
         self.posisi_y = (self.tinggi_layar - self.tinggi_jendela) // 2
 
@@ -23,57 +22,139 @@ class App:
         self.root.resizable(False, False)
         self.root.overrideredirect(True)
 
-        self.MASTER_HASH = b'$2b$12$97EhEKjGzbWqEMDT11JWCuA0SpPPG5Eumx4rZy7VV9Gd8Sf8QUJTG'
-
         self.kunci = self.muat_kunci()
         self.cipher = Fernet(self.kunci)
-        self.file_data = "kunci.json"
+        self.file_data = "data.json"
         self.muat_data()
 
-        self.container = ttk.Frame(root)
+        self.dashboard_window = None
+        self.tampilkan_login()
 
-        # Frame utama untuk login di tengah
+    def tampilkan_login(self):
+        """Menampilkan halaman login."""
+        if hasattr(self, "container"):
+            self.container.destroy()
+
+        self.container = ttk.Frame(self.root)
+        self.container.pack(expand=True, fill="both")
+
         self.formlogin = ttk.Frame(self.container)
-        self.label_password = ttk.Label(self.formlogin, text="Password:")
+        ttk.Label(self.formlogin, text="Email:").grid(row=0, column=0, padx=5, pady=5)
+        self.entry_email = ttk.Entry(self.formlogin)
+        self.entry_email.grid(row=0, column=1, padx=5, pady=5)
+
+        ttk.Label(self.formlogin, text="Password:").grid(row=1, column=0, padx=5, pady=5)
         self.entry_password = ttk.Entry(self.formlogin, show="*")
+        self.entry_password.grid(row=1, column=1, padx=5, pady=5)
+
         self.login_btn = ttk.Button(self.formlogin, text="Login", command=self.cek_password)
-        self.Label_buat_akun = ttk.Label(self.container, text="Buat akun baru.")
+        self.login_btn.grid(row=2, column=1, pady=10)
 
-        self.container.pack(expand=True,fill="both",anchor="center")
-        self.formlogin.pack(expand=True,pady=100)
-        self.label_password.grid(row=0,column=0,padx=5)
-        self.entry_password.grid(row=0,column=1,padx=5)
-        self.login_btn.grid(row=1,column=1,pady=5)
-        self.Label_buat_akun.pack(side="right")
+        self.Label_buat_akun = ttk.Label(self.container, text="Buat akun baru.", foreground="blue", cursor="hand2")
+        self.Label_buat_akun.pack(side="right", padx=10, pady=10)
+        self.Label_buat_akun.bind("<Button-1>", lambda event: self.tampilkan_master_password())
 
-        self.Label_buat_akun.bind("<Button-1>",lambda event: self.buat_akun_baru())
+        self.formlogin.pack(pady=50)
 
+    def tampilkan_master_password(self):
+        """Meminta Master Password sebelum membuat akun."""
+        if hasattr(self, "container"):
+            self.container.destroy()
 
+        self.container = ttk.Frame(self.root)
+        self.container.pack(expand=True, fill="both")
 
-        self.dashboard_window = None  # Tambahkan variabel untuk melacak dashboard window
+        self.form_master = ttk.Frame(self.container)
+        ttk.Label(self.form_master, text="Masukkan Master Password:").pack(pady=5)
+        self.entry_master = ttk.Entry(self.form_master, show="*")
+        self.entry_master.pack(pady=5)
+
+        self.btn_master = ttk.Button(self.form_master, text="Verifikasi", command=self.verifikasi_master_password)
+        self.btn_master.pack(pady=10)
+
+        self.btn_kembali = ttk.Button(self.container, text="Kembali", command=self.tampilkan_login)
+        self.btn_kembali.pack(side="bottom", pady=10)
+
+        self.form_master.pack(pady=50)
+
+    def verifikasi_master_password(self):
+        """Memeriksa Master Password sebelum mengizinkan pembuatan akun baru."""
+        master_input = self.entry_master.get().encode()
+        if bcrypt.checkpw(master_input, self.MASTER_PASSWORD):
+            messagebox.showinfo("Sukses", "Master Password benar!")
+            self.buat_akun_baru()  # Pindah ke form pendaftaran
+        else:
+            messagebox.showerror("Error", "Master Password salah!")
 
     def buat_akun_baru(self):
-        if self.dashboard_window is not None and self.dashboard_window.winfo_exists():
-            self.dashboard_window.deiconify()  # Jika sudah ada, munculkan kembali
+        """Menampilkan halaman pembuatan akun baru setelah verifikasi Master Password."""
+        self.container.destroy()
+
+        self.container = ttk.Frame(self.root)
+        self.container.pack(expand=True, fill="both")
+
+        self.form_buat_akun = ttk.Frame(self.container)
+        ttk.Label(self.form_buat_akun, text="Email:").grid(row=0, column=0, padx=5, pady=5)
+        self.entry_email_reg = ttk.Entry(self.form_buat_akun)
+        self.entry_email_reg.grid(row=0, column=1, padx=5, pady=5)
+
+        ttk.Label(self.form_buat_akun, text="Password:").grid(row=1, column=0, padx=5, pady=5)
+        self.entry_password_reg = ttk.Entry(self.form_buat_akun, show="*")
+        self.entry_password_reg.grid(row=1, column=1, padx=5, pady=5)
+
+        self.btn_register = ttk.Button(self.form_buat_akun, text="Daftar", command=self.simpan_akun)
+        self.btn_register.grid(row=2, column=1, pady=10)
+
+        self.btn_kembali = ttk.Button(self.container, text="Kembali", command=self.tampilkan_login)
+        self.btn_kembali.pack(side="bottom", pady=10)
+
+        self.form_buat_akun.pack(pady=50)
+
+    def simpan_akun(self):
+        """Menyimpan akun baru setelah pendaftaran."""
+        email = self.entry_email_reg.get()
+        password = self.entry_password_reg.get()
+
+        if not email or not password:
+            messagebox.showerror("Error", "Email dan Password tidak boleh kosong!")
             return
 
-        self.dashboard_window = tk.Toplevel(self.root)  # Hubungkan ke root utama
-        self.dashboard_window.title("Buat akun baru")
+        for akun in self.data:
+            if akun["email"] == email:
+                messagebox.showerror("Error", "Email sudah terdaftar!")
+                return
+
+        hashed_password = bcrypt.hashpw(password.encode(), bcrypt.gensalt())
+        akun_baru = {"email": email, "password": hashed_password.decode()}
+        self.data.append(akun_baru)
+        self.simpan_data()
+
+        messagebox.showinfo("Sukses", "Akun berhasil dibuat! Silakan login.")
+        self.tampilkan_login()
+
+    def cek_password(self):
+        """Memeriksa email dan password yang dimasukkan saat login."""
+        email = self.entry_email.get()
+        password = self.entry_password.get().encode()
+
+        for akun in self.data:
+            if akun["email"] == email and bcrypt.checkpw(password, akun["password"].encode()):
+                messagebox.showinfo("Login Berhasil", "Selamat datang!")
+                self.root.withdraw()
+                self.dashboard()
+                return
+
+        messagebox.showerror("Login Gagal", "Email atau Password salah!")
+
+    def dashboard(self):
+        """Menampilkan dashboard setelah login berhasil."""
+        self.dashboard_window = tk.Toplevel(self.root)
+        self.dashboard_window.title("Dashboard")
         self.dashboard_window.geometry("400x300")
 
-        self.container = tk.Frame(self.dashboard_window, bg="red")  # Pastikan ini terkait dengan dashboard_window
-        self.formbuatakun = tk.Frame(self.container,bg="blue")
-        self.Labelusername = ttk.Label(self.container,text="Usename:")
-
-        self.container.pack(expand=True, fill="both")  # Tambahkan pack agar terlihat
-        self.formbuatakun.pack()
-        self.Labelusername.grid(row=0,column=0)
-
-
-        # Lingkungan desain UI
-
-        self.dashboard_window.protocol("WM_DELETE_WINDOW", self.keluar_program)
-    
+        ttk.Label(self.dashboard_window, text="Selamat datang di Dashboard!").pack(pady=20)
+        exit_btn = ttk.Button(self.dashboard_window, text="Keluar", command=self.keluar_program)
+        exit_btn.pack(pady=10)
 
     def muat_kunci(self):
         file_kunci = "kunci.key"
@@ -85,15 +166,6 @@ class App:
             with open(file_kunci, "wb") as file:
                 file.write(kunci)
             return kunci
-
-    def cek_password(self):
-        password = self.entry_password.get().encode()
-        if bcrypt.checkpw(password, self.MASTER_HASH):
-            messagebox.showinfo("Login Berhasil", "Selamat datang!")
-            self.root.withdraw()  # Sembunyikan jendela login, bukan destroy
-            self.dashboard()
-        else:
-            messagebox.showerror("Login Gagal", "Password salah! Coba lagi.")
 
     def muat_data(self):
         if not os.path.exists(self.file_data):
@@ -113,27 +185,8 @@ class App:
         with open(self.file_data, "wb") as file:
             file.write(data_enkripsi)
 
-    def dashboard(self):
-        if self.dashboard_window is not None and self.dashboard_window.winfo_exists():
-            self.dashboard_window.deiconify()  # Jika sudah ada, munculkan kembali
-            return
-
-        self.dashboard_window = tk.Toplevel()
-        self.dashboard_window.title("Dashboard")
-        self.dashboard_window.geometry("400x300")
-
-        ttk.Label(self.dashboard_window, text="Selamat datang di Dashboard!").pack(pady=20)
-
-        exit_btn = ttk.Button(self.dashboard_window, text="Keluar", command=self.keluar_program)
-        exit_btn.pack(pady=10)
-
-        self.dashboard_window.protocol("WM_DELETE_WINDOW", self.keluar_program)
-
     def keluar_program(self):
-        if self.dashboard_window:
-            self.dashboard_window.destroy()
-        self.root.destroy()  # Pastikan aplikasi benar-benar berhenti
-
+        self.root.destroy()
 
 if __name__ == "__main__":
     root = tk.Tk()
