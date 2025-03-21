@@ -5,6 +5,13 @@ import os
 from tkinter import ttk, messagebox
 from cryptography.fernet import Fernet
 from PIL import Image,ImageTk
+import barcode
+from barcode.writer import ImageWriter
+import csv
+import cv2
+import pandas as pd
+from pyzbar.pyzbar import decode
+import os
 class App:
     MASTER_PASSWORD = b'$2b$12$97EhEKjGzbWqEMDT11JWCuA0SpPPG5Eumx4rZy7VV9Gd8Sf8QUJTG' # Hash dari "Kurik"
 
@@ -213,9 +220,8 @@ class App:
         self.manual = ttk.Label(self.navigasi,image=self.ubah_image)
 
         #Navigasi placement
-        self.tambah_data.grid(row=0,column=1,padx=20,pady=10)
-        self.grafik.grid(row=1,column=1,padx=20,pady=10)
-        self.manual.grid(row=2,column=1,padx=20,pady=10)
+        self.tambah_data.grid(row=1,column=1,padx=20,pady=10)
+        self.grafik.grid(row=0,column=1,padx=20,pady=10)
 
         self.navigasi.place(x=0,y=0,width=100,height=self.tinggi_layar)
         self.konten.place(x=100,y=0,width=(self.lebar_layar-100),height=self.tinggi_layar)
@@ -226,7 +232,7 @@ class App:
         #kontrol input
         self.tambah_data.bind("<Button-1>", lambda event: self.tampilkan_tambah_data())
         self.grafik.bind("<Button-1>", lambda event: self.tampilkan_grafik())
-        self.manual.bind("<Button-1>", lambda event: self.tampilkan_manual())
+
 
     def tampilkan_tambah_data(self):
         # Hapus semua widget yang ada di dalam self.konten
@@ -235,7 +241,103 @@ class App:
 
         # Tambahkan widget baru
         self.container = tk.Frame(self.konten, bg="white")
-        self.container.pack(expand=True,fill="both")
+        self.menu_scan = tk.Frame(self.container, bg="gray")
+        self.preview_scan = tk.Frame(self.container, bg="purple")
+        self.preview_data = tk.Frame(self.container, bg="#f12345")
+
+        # Load gambar
+        self.scan_bar_img = Image.open("icons/picture.png").convert("RGBA").resize((40, 40))
+        self.scan_bar_img = ImageTk.PhotoImage(self.scan_bar_img)
+
+        self.camera_bar_img = Image.open("icons/camera.png").convert("RGBA").resize((40, 40))
+        self.camera_bar_img = ImageTk.PhotoImage(self.camera_bar_img)
+
+        self.edit_data_img = Image.open("icons/edit.png").convert("RGBA").resize((40, 40))
+        self.edit_data_img = ImageTk.PhotoImage(self.edit_data_img)
+
+        # Tambahkan label dengan gambar
+        self.scan_bar = ttk.Label(self.menu_scan, image=self.scan_bar_img)
+        self.scan_bar.pack(expand=True,fill="x",side="left",padx=5)
+
+        self.camera_bar = ttk.Label(self.menu_scan, image=self.camera_bar_img)
+        self.camera_bar.pack(expand=True,fill="x",side="left",padx=5)
+
+        self.edit_data = ttk.Label(self.menu_scan, image=self.edit_data_img)
+        self.edit_data.pack(expand=True,fill="x",side="left",padx=5)
+
+        # Tempatkan frame
+        self.container.pack(expand=True, fill="both")
+        
+        lebar_menu = max(200, self.lebar_layar - 1000)  
+        lebar_preview = max(200, self.lebar_layar - 500)  
+        
+        self.menu_scan.place(x=0, y=0, width=lebar_menu, height=100)
+        self.preview_scan.place(x=0, y=100, width=lebar_menu, height=(self.tinggi_layar - 100))
+        self.preview_data.place(x=lebar_menu, y=0, width=lebar_preview, height=self.tinggi_layar)
+
+        self.scan_bar.bind("<Button-1>", lambda event: self.tampilkan_scan_bar_img())
+
+
+
+    def tampilkan_scan_bar_img(self):
+        # Hapus semua widget yang ada di dalam self.konten
+        for widget in self.konten.winfo_children():
+            widget.destroy()
+
+        self.barang = [
+            {"id": "1234567890", "nama": "Laptop XYZ", "harga": 7500000, "tanggal_produksi": "2025-03-20", "produsen": "Tech Company"},
+            {"id": "9876543210", "nama": "Smartphone ABC", "harga": 5000000, "tanggal_produksi": "2025-02-15", "produsen": "Mobile Corp"}
+        ]
+
+        self.csv_filename = "data_barang.csv"
+        with open(self.csv_filename, mode="w", newline="") as file:
+            fieldnames = ["id", "nama", "harga", "tanggal_produksi", "produsen"]
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(self.barang)
+
+        print(f"✅ Data barang berhasil disimpan dalam '{self.csv_filename}'")
+
+        # ==========================
+        # 3. Membaca dan Mendekode Barcode
+        # ==========================
+        if not hasattr(self, "barcode_filename") or not os.path.exists(self.barcode_filename):
+            print("❌ File barcode tidak ditemukan!")
+            return
+
+        # Baca database barang dari CSV dengan memastikan kolom "id" dibaca sebagai string
+        df = pd.read_csv(self.csv_filename, dtype={"id": str})
+
+        # Buka gambar barcode
+        image = cv2.imread(self.barcode_filename)
+
+        # Konversi ke grayscale (opsional, bisa membantu pembacaan)
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+        # Decode barcode
+        barcodes = decode(gray)
+
+        if not barcodes:
+            print("❌ Tidak ada barcode yang terdeteksi!")
+        else:
+            for barcode in barcodes:
+                id_barang = barcode.data.decode("utf-8")
+                print(f"🔍 ID Barang Terbaca: {id_barang}")
+
+                # Cari data barang berdasarkan ID
+                data_barang = df[df["id"] == id_barang]
+                if not data_barang.empty:
+                    print("✅ Data Barang Ditemukan:")
+                    print(data_barang.to_string(index=False))
+                else:
+                    print("❌ Barang tidak ditemukan di database!")
+
+            # Tampilkan gambar hanya jika GUI tersedia
+            if cv2.waitKey(1) != -1:  
+                cv2.imshow("Barcode Scanner", image)
+                cv2.waitKey(0)
+                cv2.destroyAllWindows()
+            
 
     def tampilkan_grafik(self):
         # Hapus semua widget yang ada di dalam self.konten
@@ -246,14 +348,6 @@ class App:
         self.labell = ttk.Label(self.konten, text="Percobaan kedua")
         self.labell.pack()
 
-    def tampilkan_manual(self):
-        # Hapus semua widget yang ada di dalam self.konten
-        for widget in self.konten.winfo_children():
-            widget.destroy()
-
-        # Tambahkan widget baru
-        self.labell = ttk.Label(self.konten, text="Percobaan ketiga")
-        self.labell.pack()
 
 
 if __name__ == "__main__":
