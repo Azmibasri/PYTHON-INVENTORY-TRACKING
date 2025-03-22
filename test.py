@@ -15,11 +15,12 @@ id_barang = "9876543210"  # ID unik barang
 barcode_type = barcode.get_barcode_class('code128')
 
 # Buat barcode dan simpan sebagai gambar PNG
-barcode_filename = "barang_barcode.png"
+barcode_filename = "barang_barcode2.png"
 my_barcode = barcode_type(id_barang, writer=ImageWriter())
 my_barcode.save("barang_barcode")
 
 print(f"✅ Barcode berhasil dibuat dan disimpan sebagai '{barcode_filename}'")
+'''
 
 # ==========================
 # 2. Menyimpan Data Barang ke CSV
@@ -75,3 +76,4 @@ else:
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
+'''

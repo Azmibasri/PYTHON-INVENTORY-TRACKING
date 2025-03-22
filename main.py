@@ -277,20 +277,13 @@ class App:
         self.preview_data.place(x=lebar_menu, y=0, width=lebar_preview, height=self.tinggi_layar)
 
         self.scan_bar.bind("<Button-1>", lambda event: self.tampilkan_scan_bar_img())
-
-    def open_file(self):
-        self.barcode_filename = filedialog.askopenfilename(title="Pilih file",filetypes=[("semua File","*"),("Gambar",".png",".jpg")])
         
-
-    def tampilkan_scan_bar_img(self):
-
-        self.barcode_filename = "barang_barcode.png"
-        
+    def proses_scan_bar_img(self, barcode_filename):
         self.barang = [
             {"id": "1234567890", "nama": "Laptop XYZ", "harga": 7500000, "tanggal_produksi": "2025-03-20", "produsen": "Tech Company"},
             {"id": "9876543210", "nama": "Smartphone ABC", "harga": 5000000, "tanggal_produksi": "2025-02-15", "produsen": "Mobile Corp"}
         ]
-
+        
         self.csv_filename = "data_barang.csv"
         with open(self.csv_filename, mode="w", newline="") as file:
             fieldnames = ["id", "nama", "harga", "tanggal_produksi", "produsen"]
@@ -298,65 +291,54 @@ class App:
             writer.writeheader()
             writer.writerows(self.barang)
 
-        # Cek apakah file barcode ada
-        if not os.path.exists(self.barcode_filename):
-            label = tk.Label(self.preview_scan, text="File barcode tidak ditemukan")
-            label.pack()
-            return  # Hentikan eksekusi lebih lanjut jika tidak ada file barcode
+        if not os.path.exists(barcode_filename):
+            tk.Label(self.preview_scan, text="File barcode tidak ditemukan").pack()
+            return
 
-        # Membaca CSV
         try:
             df = pd.read_csv(self.csv_filename, dtype={"id": str})
         except Exception as e:
-            label = tk.Label(self.preview_scan, text=f"Error membaca CSV: {str(e)}")
-            label.pack()
+            tk.Label(self.preview_scan, text=f"Error membaca CSV: {str(e)}").pack()
             return
 
-        # Membaca barcode dari gambar
-        image = cv2.imread(self.barcode_filename)
+        image = cv2.imread(barcode_filename)
         if image is None:
-            label = tk.Label(self.preview_scan, text="Gagal membaca gambar barcode.")
-            label.pack()
+            tk.Label(self.preview_scan, text="Gagal membaca gambar barcode.").pack()
             return
 
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         barcodes = decode(gray)
 
         if not barcodes:
-            peringatan = tk.Label(self.preview_scan, text="Tidak ada barcode yang terdeteksi")
-            peringatan.pack()
+            tk.Label(self.preview_scan, text="Tidak ada barcode yang terdeteksi").pack()
             return
 
-        # Jika ada barcode yang terdeteksi
         for barcode in barcodes:
             id_barang = barcode.data.decode("utf-8")
-            barang_terbaca = tk.Label(self.preview_scan, text=f"ID Barang Terbaca: {id_barang}")
-            barang_terbaca.pack()
+            tk.Label(self.preview_scan, text=f"ID Barang Terbaca: {id_barang}").pack()
 
             data_barang = df[df["id"] == id_barang]
             if not data_barang.empty:
-                barang_ditemukan = tk.Label(self.preview_scan, text="Data Barang ditemukan:")
-                barang_ditemukan.pack()
-                barang_ditemukan_hasil = tk.Label(self.preview_scan, text=data_barang.to_string(index=False))
-                barang_ditemukan_hasil.pack()
+                tk.Label(self.preview_scan, text="Data Barang ditemukan:").pack()
+                tk.Label(self.preview_scan, text=data_barang.to_string(index=False)).pack()
             else:
-                barang_tidak_ditemukan = tk.Label(self.preview_scan, text="Barang tidak ditemukan di database")
-                barang_tidak_ditemukan.pack()
+                tk.Label(self.preview_scan, text="Barang tidak ditemukan di database").pack()
 
         cv2.destroyAllWindows()
 
+    def open_file(self):
+        file_path = filedialog.askopenfilename(filetypes=[("PNG Files", "*.png"), ("All Files", "*.*")])
+        return file_path
 
-        
-            
+    def tampilkan_scan_bar_img(self, event=None):
+        file_path = self.open_file()
+        if file_path:
+            self.proses_scan_bar_img(file_path)
 
     def tampilkan_grafik(self):
-        # Hapus semua widget yang ada di dalam self.konten
         for widget in self.konten.winfo_children():
             widget.destroy()
-
-        # Tambahkan widget baru
-        self.labell = ttk.Label(self.konten, text="Percobaan kedua")
-        self.labell.pack()
+        ttk.Label(self.konten, text="Percobaan kedua").pack()
 
 
 
