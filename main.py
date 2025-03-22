@@ -281,7 +281,8 @@ class App:
     def proses_scan_bar_img(self, barcode_filename):
         self.barang = [
             {"id": "1234567890", "nama": "Laptop XYZ", "harga": 7500000, "tanggal_produksi": "2025-03-20", "produsen": "Tech Company"},
-            {"id": "9876543210", "nama": "Smartphone ABC", "harga": 5000000, "tanggal_produksi": "2025-02-15", "produsen": "Mobile Corp"}
+            {"id": "9876543210", "nama": "Smartphone ABC", "harga": 5000000, "tanggal_produksi": "2025-02-15", "produsen": "Mobile Corp"},
+            {"id": "7484478871", "nama": "LOQ Laptop", "harga": 13000000, "tanggal_produksi": "2025-02-15", "produsen": "lenovo"}
         ]
         
         self.csv_filename = "data_barang.csv"

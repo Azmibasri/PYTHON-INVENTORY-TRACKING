@@ -9,15 +9,15 @@ import os
 # ==========================
 # 1. Membuat Barcode
 # ==========================
-id_barang = "9876543210"  # ID unik barang
+id_barang = "7484478871"  # ID unik barang
 
 # Pilih tipe barcode (Code128)
 barcode_type = barcode.get_barcode_class('code128')
 
 # Buat barcode dan simpan sebagai gambar PNG
-barcode_filename = "barang_barcode2.png"
+barcode_filename = "barang_barcode.png"
 my_barcode = barcode_type(id_barang, writer=ImageWriter())
-my_barcode.save("barang_barcode")
+my_barcode.save("barang_barcode3")
 
 print(f"✅ Barcode berhasil dibuat dan disimpan sebagai '{barcode_filename}'")
 '''
