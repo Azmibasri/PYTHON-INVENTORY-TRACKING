@@ -5,12 +5,13 @@ import os
 from tkinter import ttk, messagebox
 from cryptography.fernet import Fernet
 from PIL import Image,ImageTk
-import barcode
-from barcode.writer import ImageWriter
 import csv
 import cv2
 import pandas as pd
 from pyzbar.pyzbar import decode
+from tkinter import filedialog
+
+
 import os
 class App:
     MASTER_PASSWORD = b'$2b$12$97EhEKjGzbWqEMDT11JWCuA0SpPPG5Eumx4rZy7VV9Gd8Sf8QUJTG' # Hash dari "Kurik"
@@ -277,13 +278,14 @@ class App:
 
         self.scan_bar.bind("<Button-1>", lambda event: self.tampilkan_scan_bar_img())
 
-
+    def open_file(self):
+        self.barcode_filename = filedialog.askopenfilename(title="Pilih file",filetypes=[("semua File","*"),("Gambar",".png",".jpg")])
+        
 
     def tampilkan_scan_bar_img(self):
-        # Hapus semua widget yang ada di dalam self.konten
-        for widget in self.konten.winfo_children():
-            widget.destroy()
 
+        self.barcode_filename = "barang_barcode.png"
+        
         self.barang = [
             {"id": "1234567890", "nama": "Laptop XYZ", "harga": 7500000, "tanggal_produksi": "2025-03-20", "produsen": "Tech Company"},
             {"id": "9876543210", "nama": "Smartphone ABC", "harga": 5000000, "tanggal_produksi": "2025-02-15", "produsen": "Mobile Corp"}
@@ -296,47 +298,55 @@ class App:
             writer.writeheader()
             writer.writerows(self.barang)
 
-        print(f"✅ Data barang berhasil disimpan dalam '{self.csv_filename}'")
+        # Cek apakah file barcode ada
+        if not os.path.exists(self.barcode_filename):
+            label = tk.Label(self.preview_scan, text="File barcode tidak ditemukan")
+            label.pack()
+            return  # Hentikan eksekusi lebih lanjut jika tidak ada file barcode
 
-        # ==========================
-        # 3. Membaca dan Mendekode Barcode
-        # ==========================
-        if not hasattr(self, "barcode_filename") or not os.path.exists(self.barcode_filename):
-            print("❌ File barcode tidak ditemukan!")
+        # Membaca CSV
+        try:
+            df = pd.read_csv(self.csv_filename, dtype={"id": str})
+        except Exception as e:
+            label = tk.Label(self.preview_scan, text=f"Error membaca CSV: {str(e)}")
+            label.pack()
             return
 
-        # Baca database barang dari CSV dengan memastikan kolom "id" dibaca sebagai string
-        df = pd.read_csv(self.csv_filename, dtype={"id": str})
-
-        # Buka gambar barcode
+        # Membaca barcode dari gambar
         image = cv2.imread(self.barcode_filename)
+        if image is None:
+            label = tk.Label(self.preview_scan, text="Gagal membaca gambar barcode.")
+            label.pack()
+            return
 
-        # Konversi ke grayscale (opsional, bisa membantu pembacaan)
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-        # Decode barcode
         barcodes = decode(gray)
 
         if not barcodes:
-            print("❌ Tidak ada barcode yang terdeteksi!")
-        else:
-            for barcode in barcodes:
-                id_barang = barcode.data.decode("utf-8")
-                print(f"🔍 ID Barang Terbaca: {id_barang}")
+            peringatan = tk.Label(self.preview_scan, text="Tidak ada barcode yang terdeteksi")
+            peringatan.pack()
+            return
 
-                # Cari data barang berdasarkan ID
-                data_barang = df[df["id"] == id_barang]
-                if not data_barang.empty:
-                    print("✅ Data Barang Ditemukan:")
-                    print(data_barang.to_string(index=False))
-                else:
-                    print("❌ Barang tidak ditemukan di database!")
+        # Jika ada barcode yang terdeteksi
+        for barcode in barcodes:
+            id_barang = barcode.data.decode("utf-8")
+            barang_terbaca = tk.Label(self.preview_scan, text=f"ID Barang Terbaca: {id_barang}")
+            barang_terbaca.pack()
 
-            # Tampilkan gambar hanya jika GUI tersedia
-            if cv2.waitKey(1) != -1:  
-                cv2.imshow("Barcode Scanner", image)
-                cv2.waitKey(0)
-                cv2.destroyAllWindows()
+            data_barang = df[df["id"] == id_barang]
+            if not data_barang.empty:
+                barang_ditemukan = tk.Label(self.preview_scan, text="Data Barang ditemukan:")
+                barang_ditemukan.pack()
+                barang_ditemukan_hasil = tk.Label(self.preview_scan, text=data_barang.to_string(index=False))
+                barang_ditemukan_hasil.pack()
+            else:
+                barang_tidak_ditemukan = tk.Label(self.preview_scan, text="Barang tidak ditemukan di database")
+                barang_tidak_ditemukan.pack()
+
+        cv2.destroyAllWindows()
+
+
+        
             
 
     def tampilkan_grafik(self):

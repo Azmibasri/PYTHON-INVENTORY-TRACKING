@@ -72,8 +72,6 @@ else:
             else:
                 print("❌ Barang tidak ditemukan di database!")
 
-        # Tampilkan gambar (tidak akan berjalan jika di server tanpa GUI)
-        cv2.imshow("Barcode Scanner", image)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
