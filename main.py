@@ -277,6 +277,7 @@ class App:
         self.preview_data.place(x=lebar_menu, y=0, width=lebar_preview, height=self.tinggi_layar)
 
         self.scan_bar.bind("<Button-1>", lambda event: self.tampilkan_scan_bar_img())
+        self.camera_bar.bind("<Button-1>", lambda event: self.proses_scan_bar_video())
         
     def proses_scan_bar_img(self, barcode_filename):
         self.barang = [
@@ -341,6 +342,98 @@ class App:
             widget.destroy()
         ttk.Label(self.konten, text="Percobaan kedua").pack()
 
+    def proses_scan_bar_video(self):
+        self.proses = tk.Toplevel(self.root)
+        self.proses.title("Barcode Scanner")
+
+        self.label = tk.Label(self.proses)
+        self.label.pack()
+
+        self.hasil_label = tk.Label(self.proses, text="Scan barcode...")
+        self.hasil_label.pack()
+
+        self.cap = cv2.VideoCapture(0)
+        
+        self.scan_barcode()
+
+        self.proses.protocol("WM_DELETE_WINDOW", self.on_close)
+    
+    def scan_barcode(self):
+        ret, frame = self.cap.read()
+
+        if ret:
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            barcodes = decode(gray)
+
+            detected_barcodes = []
+
+            for barcode in barcodes:
+                barcode_data = barcode.data.decode("utf-8")
+                detected_barcodes.append(barcode_data)
+                
+                if barcode_data == self.last_barcode:
+                    continue  # Abaikan jika barcode yang sama masih terlihat
+
+                self.last_barcode = barcode_data
+                barcode_type = barcode.type
+                x, y, w, h = barcode.rect
+                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                text = f"{barcode_data} ({barcode_type})"
+                self.hasil_label.config(text=text)
+                
+                # Data barang
+                self.barang = [
+                    {"id": "1234567890", "nama": "Laptop XYZ", "harga": 7500000, "tanggal_produksi": "2025-03-20", "produsen": "Tech Company"},
+                    {"id": "9876543210", "nama": "Smartphone ABC", "harga": 5000000, "tanggal_produksi": "2025-02-15", "produsen": "Mobile Corp"},
+                    {"id": "7484478871", "nama": "LOQ Laptop", "harga": 13000000, "tanggal_produksi": "2025-02-15", "produsen": "Lenovo"}
+                ]
+
+                self.csv_filename = "data_barang.csv"
+                with open(self.csv_filename, mode="w", newline="") as file:
+                    fieldnames = ["id", "nama", "harga", "tanggal_produksi", "produsen"]
+                    writer = csv.DictWriter(file, fieldnames=fieldnames)
+                    writer.writeheader()
+                    writer.writerows(self.barang)
+
+                # Membaca data dari CSV
+                if os.path.exists(self.csv_filename):
+                    try:
+                        df = pd.read_csv(self.csv_filename, dtype={"id": str})
+                    except Exception as e:
+                        tk.Label(self.proses, text=f"Error membaca CSV: {str(e)}").pack()
+                        return
+                else:
+                    tk.Label(self.proses, text="File CSV tidak ditemukan").pack()
+                    return
+
+                # Mencari barang berdasarkan ID barcode
+                data_barang = df[df["id"] == barcode_data]
+                if not data_barang.empty:
+                    tk.Label(self.preview_scan, text="Data Barang ditemukan:").pack()
+                    tk.Label(self.preview_scan, text=data_barang.to_string(index=False)).pack()
+                else:
+                    tk.Label(self.preview_scan, text="Barang tidak ditemukan di database").pack()
+
+            # Reset last_barcode jika tidak ada barcode yang terdeteksi
+            if not detected_barcodes:
+                self.last_barcode = None
+            
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            img = Image.fromarray(frame)
+            imgtk = ImageTk.PhotoImage(image=img)
+
+            self.label.imgtk = imgtk
+            self.label.config(image=imgtk)
+        
+        self.proses.after(10, self.scan_barcode)
+    
+    def on_close(self):
+        self.cap.release()
+        self.proses.destroy()
+    
+    def on_close(self):
+        self.cap.release()
+        self.proses.destroy()
 
 
 if __name__ == "__main__":

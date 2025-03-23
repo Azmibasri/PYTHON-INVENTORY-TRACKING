@@ -1,79 +1,68 @@
-import barcode
-from barcode.writer import ImageWriter
-import csv
 import cv2
-import pandas as pd
+import tkinter as tk
+from tkinter import Label
+from PIL import Image, ImageTk
 from pyzbar.pyzbar import decode
-import os
 
-# ==========================
-# 1. Membuat Barcode
-# ==========================
-id_barang = "7484478871"  # ID unik barang
+class BarcodeScannerApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Barcode Scanner")
 
-# Pilih tipe barcode (Code128)
-barcode_type = barcode.get_barcode_class('code128')
+        # Label untuk menampilkan video
+        self.label = Label(root)
+        self.label.pack()
 
-# Buat barcode dan simpan sebagai gambar PNG
-barcode_filename = "barang_barcode.png"
-my_barcode = barcode_type(id_barang, writer=ImageWriter())
-my_barcode.save("barang_barcode3")
+        # Label untuk menampilkan hasil barcode
+        self.result_label = Label(root, text="Scan a barcode...", font=("Arial", 14))
+        self.result_label.pack()
 
-print(f"✅ Barcode berhasil dibuat dan disimpan sebagai '{barcode_filename}'")
-'''
+        # Buka kamera
+        self.cap = cv2.VideoCapture(0)
 
-# ==========================
-# 2. Menyimpan Data Barang ke CSV
-# ==========================
-barang = [
-    {"id": "1234567890", "nama": "Laptop XYZ", "harga": 7500000, "tanggal_produksi": "2025-03-20", "produsen": "Tech Company"},
-    {"id": "9876543210", "nama": "Smartphone ABC", "harga": 5000000, "tanggal_produksi": "2025-02-15", "produsen": "Mobile Corp"}
-]
+        # Jalankan pemindaian
+        self.scan_barcode()
 
-csv_filename = "data_barang.csv"
-with open(csv_filename, mode="w", newline="") as file:
-    fieldnames = ["id", "nama", "harga", "tanggal_produksi", "produsen"]
-    writer = csv.DictWriter(file, fieldnames=fieldnames)
-    writer.writeheader()
-    writer.writerows(barang)
+        # Tutup kamera saat jendela ditutup
+        self.root.protocol("WM_DELETE_WINDOW", self.on_close)
 
-print(f"✅ Data barang berhasil disimpan dalam '{csv_filename}'")
+    def scan_barcode(self):
+        ret, frame = self.cap.read()
+        if ret:
+            # Konversi ke grayscale
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-# ==========================
-# 3. Membaca dan Mendekode Barcode
-# ==========================
-# Periksa apakah file barcode ada
-if not os.path.exists(barcode_filename):
-    print("❌ File barcode tidak ditemukan!")
-else:
-    # Baca database barang dari CSV dengan memastikan kolom "id" dibaca sebagai string
-    df = pd.read_csv(csv_filename, dtype={"id": str})
+            # Decode barcode
+            barcodes = decode(gray)
+            for barcode in barcodes:
+                barcode_data = barcode.data.decode("utf-8")
+                barcode_type = barcode.type
 
-    # Buka gambar barcode
-    image = cv2.imread(barcode_filename)
+                # Gambar kotak di sekitar barcode
+                x, y, w, h = barcode.rect
+                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
-    # Konversi ke grayscale (opsional, bisa membantu pembacaan)
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+                # Tampilkan hasil scan
+                text = f"{barcode_data} ({barcode_type})"
+                self.result_label.config(text=text)
 
-    # Decode barcode
-    barcodes = decode(gray)
+            # Konversi frame ke format Tkinter
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            img = Image.fromarray(frame)
+            imgtk = ImageTk.PhotoImage(image=img)
 
-    if not barcodes:
-        print("❌ Tidak ada barcode yang terdeteksi!")
-    else:
-        for barcode in barcodes:
-            id_barang = barcode.data.decode("utf-8")
-            print(f"🔍 ID Barang Terbaca: {id_barang}")
+            self.label.imgtk = imgtk
+            self.label.config(image=imgtk)
 
-            # Cari data barang berdasarkan ID
-            data_barang = df[df["id"] == id_barang]
-            if not data_barang.empty:
-                print("✅ Data Barang Ditemukan:")
-                print(data_barang.to_string(index=False))
-            else:
-                print("❌ Barang tidak ditemukan di database!")
+        # Looping scan setiap 10ms
+        self.root.after(10, self.scan_barcode)
 
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+    def on_close(self):
+        self.cap.release()
+        self.root.destroy()
 
-'''
+# Jalankan aplikasi
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = BarcodeScannerApp(root)
+    root.mainloop()
