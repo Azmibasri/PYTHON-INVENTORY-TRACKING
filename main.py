@@ -284,29 +284,9 @@ class App:
         self.camera_bar.bind("<Button-1>", lambda event: self.proses_scan_bar_video())
         
     def proses_scan_bar_img(self, barcode_filename):
-        self.barang = [
-            {"id": "1234567890", "nama": "Laptop XYZ", "harga": 7500000, "tanggal_produksi": "2025-03-20", "produsen": "Tech Company"},
-            {"id": "9876543210", "nama": "Smartphone ABC", "harga": 5000000, "tanggal_produksi": "2025-02-15", "produsen": "Mobile Corp"},
-            {"id": "7484478871", "nama": "LOQ Laptop", "harga": 13000000, "tanggal_produksi": "2025-02-15", "produsen": "lenovo"}
-        ]
+        if not hasattr(self, 'last_barcode'):
+            self.last_barcode = None
         
-        self.csv_filename = "data_barang.csv"
-        with open(self.csv_filename, mode="w", newline="") as file:
-            fieldnames = ["id", "nama", "harga", "tanggal_produksi", "produsen"]
-            writer = csv.DictWriter(file, fieldnames=fieldnames)
-            writer.writeheader()
-            writer.writerows(self.barang)
-
-        if not os.path.exists(barcode_filename):
-            tk.Label(self.preview_scan, text="File barcode tidak ditemukan").pack()
-            return
-
-        try:
-            df = pd.read_csv(self.csv_filename, dtype={"id": str})
-        except Exception as e:
-            tk.Label(self.preview_scan, text=f"Error membaca CSV: {str(e)}").pack()
-            return
-
         image = cv2.imread(barcode_filename)
         if image is None:
             tk.Label(self.preview_scan, text="Gagal membaca gambar barcode.").pack()
@@ -314,23 +294,58 @@ class App:
 
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         barcodes = decode(gray)
-
-        if not barcodes:
-            tk.Label(self.preview_scan, text="Tidak ada barcode yang terdeteksi").pack()
-            return
+        detected_barcodes = []
 
         for barcode in barcodes:
-            id_barang = barcode.data.decode("utf-8")
-            tk.Label(self.preview_scan, text=f"ID Barang Terbaca: {id_barang}").pack()
+            barcode_data = barcode.data.decode("utf-8")
+            detected_barcodes.append(barcode_data)
+                
+            if barcode_data == self.last_barcode:
+                continue  # Abaikan jika barcode yang sama masih terlihat
 
-            data_barang = df[df["id"] == id_barang]
-            if not data_barang.empty:
+            self.last_barcode = barcode_data
+            barcode_type = barcode.type
+            x, y, w, h = barcode.rect
+            cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            text = f"{barcode_data} ({barcode_type})"
+            self.hasil_label = tk.Label(self.preview_scan, text=text)
+            self.hasil_label.pack()
+                
+            if self.cursor:
+                self.cursor.execute("SELECT * FROM barang WHERE id = ?", (barcode_data,))
+                data_barang = self.cursor.fetchall()
+            else:
+                data_barang = []
+
+            for widget in self.preview_scan.winfo_children():
+                widget.destroy()
+
+            if data_barang:
                 tk.Label(self.preview_scan, text="Data Barang ditemukan:").pack()
-                tk.Label(self.preview_scan, text=data_barang.to_string(index=False)).pack()
+                for row in data_barang:
+                    self.hasil = tk.Label(self.preview_scan, text=f"ID: {row[0]}, Nama: {row[1]}, Harga: {row[2]}, Tanggal: {row[3]}, Produsen: {row[4]}")
+                    self.hasil.pack()
+                    if self.cursor and self.conn:
+                        self.cursor.execute(
+                            """
+                            INSERT INTO log (barcode_id, nama, harga, tanggal_produksi, produsen)
+                            VALUES (?, ?, ?, ?, ?)
+                            """, (row[0], row[1], row[2], row[3], row[4])
+                        )
+                        self.conn.commit()
             else:
                 tk.Label(self.preview_scan, text="Barang tidak ditemukan di database").pack()
 
-        cv2.destroyAllWindows()
+        # Reset last_barcode jika tidak ada barcode yang terdeteksi
+        if not detected_barcodes:
+            self.last_barcode = None
+        
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        img = Image.fromarray(image)
+        imgtk = ImageTk.PhotoImage(image=img)
+        
+        self.label.imgtk = imgtk
+        self.label.config(image=imgtk)
 
     def open_file(self):
         file_path = filedialog.askopenfilename(filetypes=[("PNG Files", "*.png"), ("All Files", "*.*")])
@@ -340,7 +355,7 @@ class App:
         file_path = self.open_file()
         if file_path:
             self.proses_scan_bar_img(file_path)
-
+            
     def tampilkan_grafik(self):
         for widget in self.konten.winfo_children():
             widget.destroy()
