@@ -10,6 +10,7 @@ import cv2
 import pandas as pd
 from pyzbar.pyzbar import decode
 from tkinter import filedialog
+import sqlite3
 
 
 import os
@@ -24,6 +25,9 @@ class App:
         self.tinggi_jendela = 300
         self.posisi_x = (self.lebar_layar - self.lebar_jendela) // 2
         self.posisi_y = (self.tinggi_layar - self.tinggi_jendela) // 2
+
+        self.conn = sqlite3.connect("log.amba")
+        self.cursor = self.conn.cursor()
 
         self.root.title("Inventory Tracking")
         self.root.geometry(f"{self.lebar_jendela}x{self.tinggi_jendela}+{self.posisi_x}+{self.posisi_y}")
@@ -353,87 +357,113 @@ class App:
         self.hasil_label.pack()
 
         self.cap = cv2.VideoCapture(0)
-        
+        self.last_barcode = None
+        self.db_filename = "log.amba"
+        self.init_database()        
         self.scan_barcode()
 
         self.proses.protocol("WM_DELETE_WINDOW", self.on_close)
     
+    def init_database(self):
+        self.conn = sqlite3.connect(self.db_filename)
+        self.cursor = self.conn.cursor()
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS barang (
+                id TEXT PRIMARY KEY,
+                nama TEXT,
+                harga INTEGER,
+                tanggal_produksi TEXT,
+                produsen TEXT
+            )
+        """)
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                barcode_id TEXT,
+                nama TEXT,
+                harga INTEGER,
+                tanggal_produksi TEXT,
+                produsen TEXT,
+                scan_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        self.conn.commit()
+
+        self.barang = [
+            ("1234567890", "Laptop XYZ", 7500000, "2025-03-20", "Tech Company"),
+            ("9876543210", "Smartphone ABC", 5000000, "2025-02-15", "Mobile Corp"),
+            ("7484478871", "LOQ Laptop", 13000000, "2025-02-15", "Lenovo")
+        ]
+        self.cursor.executemany("""
+            INSERT OR IGNORE INTO barang (id, nama, harga, tanggal_produksi, produsen)
+            VALUES (?, ?, ?, ?, ?)
+        """, self.barang)
+        self.conn.commit()
+    
     def scan_barcode(self):
         ret, frame = self.cap.read()
 
-        if ret:
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            barcodes = decode(gray)
+        if not ret:
+            self.proses.after(10,self.scan_barcode)
+            return
 
-            detected_barcodes = []
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        barcodes = decode(gray)
+        detected_barcodes = []
 
-            for barcode in barcodes:
-                barcode_data = barcode.data.decode("utf-8")
-                detected_barcodes.append(barcode_data)
+        for barcode in barcodes:
+            barcode_data = barcode.data.decode("utf-8")
+            detected_barcodes.append(barcode_data)
                 
-                if barcode_data == self.last_barcode:
-                    continue  # Abaikan jika barcode yang sama masih terlihat
+            if barcode_data == self.last_barcode:
+                continue  # Abaikan jika barcode yang sama masih terlihat
 
-                self.last_barcode = barcode_data
-                barcode_type = barcode.type
-                x, y, w, h = barcode.rect
-                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                text = f"{barcode_data} ({barcode_type})"
-                self.hasil_label.config(text=text)
+            self.last_barcode = barcode_data
+            barcode_type = barcode.type
+            x, y, w, h = barcode.rect
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            text = f"{barcode_data} ({barcode_type})"
+            self.hasil_label.config(text=text)
                 
-                # Data barang
-                self.barang = [
-                    {"id": "1234567890", "nama": "Laptop XYZ", "harga": 7500000, "tanggal_produksi": "2025-03-20", "produsen": "Tech Company"},
-                    {"id": "9876543210", "nama": "Smartphone ABC", "harga": 5000000, "tanggal_produksi": "2025-02-15", "produsen": "Mobile Corp"},
-                    {"id": "7484478871", "nama": "LOQ Laptop", "harga": 13000000, "tanggal_produksi": "2025-02-15", "produsen": "Lenovo"}
-                ]
+            self.cursor.execute("SELECT * FROM barang WHERE id = ?", (barcode_data,))
+            data_barang = self.cursor.fetchall()
 
-                self.csv_filename = "data_barang.csv"
-                with open(self.csv_filename, mode="w", newline="") as file:
-                    fieldnames = ["id", "nama", "harga", "tanggal_produksi", "produsen"]
-                    writer = csv.DictWriter(file, fieldnames=fieldnames)
-                    writer.writeheader()
-                    writer.writerows(self.barang)
+            for widget in self.preview_scan.winfo_children():
+                widget.destroy()
 
-                # Membaca data dari CSV
-                if os.path.exists(self.csv_filename):
-                    try:
-                        df = pd.read_csv(self.csv_filename, dtype={"id": str})
-                    except Exception as e:
-                        tk.Label(self.proses, text=f"Error membaca CSV: {str(e)}").pack()
-                        return
-                else:
-                    tk.Label(self.proses, text="File CSV tidak ditemukan").pack()
-                    return
+            if data_barang:
+                tk.Label(self.preview_scan, text="Data Barang ditemukan:").pack()
+                for row in data_barang:
+                    self.hasil = tk.Label(self.preview_scan, text=f"ID: {row[0]}, Nama: {row[1]}, Harga: {row[2]}, Tanggal: {row[3]}, Produsen: {row[4]}")
+                    self.hasil.pack()
+                    # Simpan data ke tabel log
+                    self.cursor.execute("""
+                        INSERT INTO log (barcode_id, nama, harga, tanggal_produksi, produsen)
+                        VALUES (?, ?, ?, ?, ?)
+                    """, (row[0], row[1], row[2], row[3], row[4]))
+                    self.conn.commit()
+            else:
+                tk.Label(self.preview_scan, text="Barang tidak ditemukan di database").pack()
 
-                # Mencari barang berdasarkan ID barcode
-                data_barang = df[df["id"] == barcode_data]
-                if not data_barang.empty:
-                    tk.Label(self.preview_scan, text="Data Barang ditemukan:").pack()
-                    tk.Label(self.preview_scan, text=data_barang.to_string(index=False)).pack()
-                else:
-                    tk.Label(self.preview_scan, text="Barang tidak ditemukan di database").pack()
-
-            # Reset last_barcode jika tidak ada barcode yang terdeteksi
-            if not detected_barcodes:
-                self.last_barcode = None
+        # Reset last_barcode jika tidak ada barcode yang terdeteksi
+        if not detected_barcodes:
+            self.last_barcode = None
             
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            img = Image.fromarray(frame)
-            imgtk = ImageTk.PhotoImage(image=img)
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        img = Image.fromarray(frame)
+        imgtk = ImageTk.PhotoImage(image=img)
 
-            self.label.imgtk = imgtk
-            self.label.config(image=imgtk)
+        self.label.imgtk = imgtk
+        self.label.config(image=imgtk)     
+            
         
         self.proses.after(10, self.scan_barcode)
     
     def on_close(self):
         self.cap.release()
+        self.conn.close()
         self.proses.destroy()
-    
-    def on_close(self):
-        self.cap.release()
-        self.proses.destroy()
+
 
 
 if __name__ == "__main__":
