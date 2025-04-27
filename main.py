@@ -15,9 +15,10 @@ import sqlite3
 
 import os
 class App:
-    MASTER_PASSWORD = b'$2b$12$97EhEKjGzbWqEMDT11JWCuA0SpPPG5Eumx4rZy7VV9Gd8Sf8QUJTG' # Hash dari "Kurik"
+    MASTER_PASSWORD = b'$2b$12$97EhEKjGzbWqEMDT11JWCuA0SpPPG5Eumx4rZy7VV9Gd8Sf8QUJTG' # Hash dari "Kurik" 
 
     def __init__(self, root):
+        #Mengatur ukuran dan letak window login
         self.root = root
         self.lebar_layar = root.winfo_screenwidth()
         self.tinggi_layar = root.winfo_screenheight()
@@ -26,27 +27,31 @@ class App:
         self.posisi_x = (self.lebar_layar - self.lebar_jendela) // 2
         self.posisi_y = (self.tinggi_layar - self.tinggi_jendela) // 2
 
+        #mengkoneksikan dengan database
         self.conn = sqlite3.connect("log.amba")
         self.cursor = self.conn.cursor()
 
+        #konfigurasi tampilan dan letak login
         self.root.title("Inventory Tracking")
         self.root.geometry(f"{self.lebar_jendela}x{self.tinggi_jendela}+{self.posisi_x}+{self.posisi_y}")
         self.root.resizable(False, False)
         self.root.overrideredirect(True)
 
+        #Medeskripsi kunci dan memmuat ulang data
         self.kunci = self.muat_kunci()
         self.cipher = Fernet(self.kunci)
         self.file_data = "data.json"
         self.muat_data()
-
+        #mendapilkan window login
         self.dashboard_window = None
         self.tampilkan_login()
 
     def tampilkan_login(self):
         """Menampilkan halaman login."""
+        #Menghancurkan window sebelum memulai
         if hasattr(self, "container"):
             self.container.destroy()
-
+        #Membuat tampilan login
         self.container = ttk.Frame(self.root)
         self.container.pack(expand=True, fill="both")
 
@@ -72,7 +77,7 @@ class App:
         """Meminta Master Password sebelum membuat akun."""
         if hasattr(self, "container"):
             self.container.destroy()
-
+        #Membuat halaman master password
         self.container = ttk.Frame(self.root)
         self.container.pack(expand=True, fill="both")
 
